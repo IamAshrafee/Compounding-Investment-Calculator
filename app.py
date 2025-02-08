@@ -1,67 +1,136 @@
 import tkinter as tk
-from tkinter import messagebox
+from tkinter import messagebox, scrolledtext, filedialog
+
 
 def calculate_investment():
     try:
         initial_amount = float(entry_initial.get())
-        annual_increase = float(entry_increase.get()) / 100  # Convert % to decimal
-        annual_return = float(entry_return.get()) / 100  # Convert % to decimal
-        inflation_rate = float(entry_inflation.get()) / 100  # Convert % to decimal
+        annual_increase = float(entry_increase.get()) / 100
+        annual_return = float(entry_return.get()) / 100
+        inflation_rate = float(entry_inflation.get()) / 100
         years = int(entry_years.get())
-        
+
         investment = initial_amount
         total_amount = 0
         result_text = ""
-        
+
         for year in range(1, years + 1):
-            total_amount += investment * 12  # Add yearly investment
-            total_amount *= (1 + annual_return)  # Apply returns
-            total_before_inflation = total_amount  # Store value before inflation adjustment
-            total_amount /= (1 + inflation_rate)  # Adjust for inflation
-            
-            result_text += (f"Year {year}:\n"
-                            f"  Monthly Investment: {investment:.2f} BDT\n"
-                            f"  Total (After Return, Before Inflation): {total_before_inflation:.2f} BDT\n"
-                            f"  Total (After Inflation): {total_amount:.2f} BDT\n\n")
-            investment *= (1 + annual_increase)  # Increase monthly investment for next year
-        
-        result_label.config(text=result_text)
+            total_amount += investment * 12
+            total_amount *= 1 + annual_return
+            total_before_inflation = total_amount
+            total_amount /= 1 + inflation_rate
+
+            result_text += (
+                f"Year {year}:\n"
+                f"  Monthly Investment: {investment:,.2f} BDT\n"
+                f"  Total (Before Inflation): {total_before_inflation:,.2f} BDT\n"
+                f"  Total (After Inflation): {total_amount:,.2f} BDT\n\n"
+            )
+
+            investment *= 1 + annual_increase
+
+        result_display.config(state=tk.NORMAL)
+        result_display.delete(1.0, tk.END)
+        result_display.insert(tk.END, result_text)
+        result_display.config(state=tk.DISABLED)
     except ValueError:
         messagebox.showerror("Input Error", "Please enter valid numbers.")
+
+
+def reset_fields():
+    for entry in entries:
+        entry.delete(0, tk.END)
+    result_display.config(state=tk.NORMAL)
+    result_display.delete(1.0, tk.END)
+    result_display.config(state=tk.DISABLED)
+
+
+def save_results():
+    file_path = filedialog.asksaveasfilename(
+        defaultextension=".txt",
+        filetypes=[("Text Files", "*.txt"), ("All Files", "*.*")],
+    )
+    if file_path:
+        with open(file_path, "w") as file:
+            file.write(result_display.get(1.0, tk.END))
+
+
+def toggle_theme():
+    current_bg = root.cget("bg")
+    new_bg = "#2e2e2e" if current_bg == "#f4f4f4" else "#f4f4f4"
+    new_fg = "white" if new_bg == "#2e2e2e" else "black"
+    root.configure(bg=new_bg)
+    for widget in root.winfo_children():
+        if isinstance(widget, tk.Label) or isinstance(widget, tk.Button):
+            widget.configure(bg=new_bg, fg=new_fg)
+
 
 # Create GUI window
 root = tk.Tk()
 root.title("Investment Calculator")
-root.geometry("500x500")
+root.geometry("600x650")
+root.configure(bg="#f4f4f4")
 
-tk.Label(root, text="Initial Monthly Investment (BDT):").pack()
-entry_initial = tk.Entry(root)
-entry_initial.pack()
+# Input fields
+fields = [
+    ("Initial Monthly Investment (BDT):", "10000"),
+    ("Annual Increase (%):", "5"),
+    ("Annual Return (%):", "8"),
+    ("Inflation Rate (%):", "3"),
+    ("Number of Years:", "10"),
+]
 
+entries = []
+for label_text, default in fields:
+    tk.Label(root, text=label_text, bg="#f4f4f4", font=("Arial", 12)).pack(pady=2)
+    entry = tk.Entry(root, font=("Arial", 12))
+    entry.insert(0, default)
+    entry.pack(pady=5, ipadx=5, ipady=3)
+    entries.append(entry)
 
-tk.Label(root, text="Annual Increase (%):").pack()
-entry_increase = tk.Entry(root)
-entry_increase.pack()
+entry_initial, entry_increase, entry_return, entry_inflation, entry_years = entries
 
+# Buttons
+button_frame = tk.Frame(root, bg="#f4f4f4")
+button_frame.pack(pady=10)
 
-tk.Label(root, text="Annual Return (%):").pack()
-entry_return = tk.Entry(root)
-entry_return.pack()
+tk.Button(
+    button_frame,
+    text="Calculate",
+    command=calculate_investment,
+    bg="#28a745",
+    fg="white",
+    font=("Arial", 12),
+).pack(side=tk.LEFT, padx=10, ipadx=10)
+tk.Button(
+    button_frame,
+    text="Reset",
+    command=reset_fields,
+    bg="#dc3545",
+    fg="white",
+    font=("Arial", 12),
+).pack(side=tk.LEFT, padx=10, ipadx=10)
+tk.Button(
+    button_frame,
+    text="Save Results",
+    command=save_results,
+    bg="#007bff",
+    fg="white",
+    font=("Arial", 12),
+).pack(side=tk.LEFT, padx=10, ipadx=10)
+tk.Button(
+    button_frame,
+    text="Toggle Theme",
+    command=toggle_theme,
+    bg="#6c757d",
+    fg="white",
+    font=("Arial", 12),
+).pack(side=tk.LEFT, padx=10, ipadx=10)
 
-
-tk.Label(root, text="Inflation Rate (%):").pack()
-entry_inflation = tk.Entry(root)
-entry_inflation.pack()
-
-
-tk.Label(root, text="Number of Years:").pack()
-entry_years = tk.Entry(root)
-entry_years.pack()
-
-calculate_button = tk.Button(root, text="Calculate", command=calculate_investment)
-calculate_button.pack()
-
-result_label = tk.Label(root, text="", justify="left")
-result_label.pack()
+# Result Display
+result_display = scrolledtext.ScrolledText(
+    root, height=15, width=70, state=tk.DISABLED, font=("Courier", 10)
+)
+result_display.pack(pady=10)
 
 root.mainloop()
